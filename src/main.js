@@ -7,8 +7,9 @@ import {initData} from "./data.js";
 import {processFormData} from "./lib/utils.js";
 
 import {initTable} from "./components/table.js";
-// @todo: подключение
-
+import {initPagination} from "./components/pagination.js";
+import {initSorting} from "./components/sorting.js";
+import {initSearching} from "./components/searching.js"; // @todo: подключение
 
 // Исходные данные используемые в render()
 const {data, ...indexes} = initData(sourceData);
@@ -20,8 +21,14 @@ const {data, ...indexes} = initData(sourceData);
 function collectState() {
     const state = processFormData(new FormData(sampleTable.container));
 
+    // Приводим значения к числам
+    const rowsPerPage = parseInt(state.rowsPerPage);
+    const page = parseInt(state.page ?? 1);
+
     return {
-        ...state
+        ...state,
+        rowsPerPage,
+        page
     };
 }
 
@@ -32,8 +39,11 @@ function collectState() {
 function render(action) {
     let state = collectState(); // состояние полей из таблицы
     let result = [...data]; // копируем для последующего изменения
+    
     // @todo: использование
-
+    result = applySearch(result, state, action);
+    result = applySorting(result, state, action);
+    result = applyPagination(result, state, action);
 
     sampleTable.render(result)
 }
@@ -41,12 +51,29 @@ function render(action) {
 const sampleTable = initTable({
     tableTemplate: 'table',
     rowTemplate: 'row',
-    before: [],
-    after: []
+    before: ['search', 'header'], // Добавляем поиск перед заголовком
+    after: ['pagination']
 }, render);
 
 // @todo: инициализация
+const applyPagination = initPagination(
+    sampleTable.elements.before[1].elements, // передаём элементы пагинации
+    (el, page, isCurrent) => {
+        const input = el.querySelector('input');
+        const label = el.querySelector('span');
+        input.value = page;
+        input.checked = isCurrent;
+        label.textContent = page;
+        return el;
+    }
+);
 
+const applySorting = initSorting([
+    sampleTable.elements.before[1].elements.sortByDate,
+    sampleTable.elements.before[1].elements.sortByTotal
+]);
+
+const applySearch = initSearching('search'); // Инициализируем поиск по полю 'search'
 
 const appRoot = document.querySelector('#app');
 appRoot.appendChild(sampleTable.container);
